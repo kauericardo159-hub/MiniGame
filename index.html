@@ -1,91 +1,130 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
-    <meta charset="utf-8">
-    <title>MiniGame Dev Mode</title>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>Meu Roblox Web Engine</title>
     <style>
-        /* Estilo do Explorer (Janela Flutuante) */
-        #explorer {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 200px;
-            max-height: 80vh;
-            background: rgba(0, 0, 0, 0.8);
-            color: #0f0;
-            font-family: monospace;
-            padding: 10px;
-            border: 1px solid #0f0;
-            border-radius: 5px;
-            z-index: 999;
-            overflow-y: auto;
-            font-size: 12px;
-        }
-        #explorer h3 { margin-top: 0; color: #fff; border-bottom: 1px solid #0f0; }
-        .item { margin-bottom: 5px; cursor: pointer; }
-        .item:hover { background: #222; }
-        .status-ok { color: #0f0; }
-        .status-err { color: #f00; }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        #gui { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.5); padding: 10px; pointer-events: none; border-radius: 5px; }
+        #joystick { position: absolute; bottom: 20px; left: 20px; width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; display: none; } /* Para mobile futuro */
     </style>
 </head>
 <body>
 
-    <div id="explorer">
-        <h3>📂 EXPLORER</h3>
-        <div id="lista-objetos">Buscando objetos...</div>
-        <hr>
-        <div id="status-mapa">Mapa: Verificando...</div>
+    <div id="gui">
+        <b>Roblox Web v1.0</b><br>
+        Status: <span id="status">Carregando mapa...</span><br>
+        Use o dedo/mouse para olhar.
     </div>
 
-    <a-scene vr-mode-ui="enabled: false">
-        <a-assets>
-            <a-asset-item id="meu-mapa" src="mapa.glb"></a-asset-item>
-        </a-assets>
-
-        <a-entity id="Entidade_Mapa" gltf-model="#meu-mapa" position="0 0 -5" scale="1 1 1"></a-entity>
-
-        <a-box id="Cubo_Teste" position="-2 0.5 -3" color="red"></a-box>
-        <a-sphere id="Esfera_Teste" position="2 0.5 -3" color="blue"></a-sphere>
-
-        <a-sky color="#222"></a-sky>
-        <a-light type="ambient" intensity="1"></a-light>
-        <a-camera position="0 1.6 0"></a-camera>
-    </a-scene>
-
-    <script>
-        // Lógica para atualizar o Explorer
-        function atualizarExplorer() {
-            const lista = document.getElementById('lista-objetos');
-            const objetos = document.querySelectorAll('a-entity, a-box, a-sphere, a-light');
-            
-            lista.innerHTML = ""; // Limpa a lista
-            
-            objetos.forEach(obj => {
-                const id = obj.id || obj.tagName.toLowerCase();
-                const div = document.createElement('div');
-                div.className = "item";
-                div.innerHTML = `🔹 ${id}`;
-                lista.appendChild(div);
-            });
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
         }
+    </script>
 
-        // Verifica se o mapa carregou de verdade
-        const mapaEntidade = document.querySelector('#Entidade_Mapa');
-        const statusMapa = document.getElementById('status-mapa');
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        mapaEntidade.addEventListener('model-loaded', () => {
-            statusMapa.innerHTML = "Mapa: <span class='status-ok'>CARREGADO ✅</span>";
-            atualizarExplorer();
+        // --- CONFIGURAÇÃO DA CENA ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Céu azul clássico do Roblox
+        scene.fog = new THREE.Fog(0x87CEEB, 10, 100);
+
+        const camera = new THREE.Camera(); // Criaremos a perspectiva abaixo
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // --- ILUMINAÇÃO (Estilo Studio) ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+        sunLight.position.set(5, 10, 7.5);
+        scene.add(sunLight);
+
+        // --- BASEPLATE (Igual ao Roblox) ---
+        const gridHelper = new THREE.GridHelper(100, 100, 0x000000, 0xffffff);
+        scene.add(gridHelper);
+        
+        const plateGeo = new THREE.PlaneGeometry(100, 100);
+        const plateMat = new THREE.MeshPhongMaterial({ color: 0x3d3d3d });
+        const basePlate = new THREE.Mesh(plateGeo, plateMat);
+        basePlate.rotation.x = -Math.PI / 2;
+        scene.add(basePlate);
+
+        // --- CARREGAR O SEU MAPA DO PRISMA 3D ---
+        const loader = new GLTFLoader();
+        const urlMapa = 'https://kauericardo159-hub.github.io/MiniGame/mapa.glb';
+
+        loader.load(urlMapa, (gltf) => {
+            const mapa = gltf.scene;
+            mapa.scale.set(10, 10, 10); // Aumenta o mapa
+            mapa.position.set(0, 0, 0); // No centro
+            scene.add(mapa);
+            document.getElementById('status').innerText = "Mapa Online!";
+        }, 
+        undefined, 
+        (error) => {
+            console.error(error);
+            document.getElementById('status').innerText = "Erro ao carregar mapa.glb";
         });
 
-        mapaEntidade.addEventListener('model-error', () => {
-            statusMapa.innerHTML = "Mapa: <span class='status-err'>ERRO ❌</span>";
-            console.error("Não foi possível carregar o mapa.glb");
+        // --- CONTROLES (Câmera de Jogador) ---
+        const playerCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        playerCamera.position.y = 2; // Altura dos olhos do avatar
+        
+        // Simples rotação por toque/mouse
+        let isDragging = false;
+        let previousMouseX = 0;
+        let previousMouseY = 0;
+
+        document.addEventListener('mousedown', () => isDragging = true);
+        document.addEventListener('mouseup', () => isDragging = false);
+        document.addEventListener('mousemove', (e) => {
+            if(isDragging) {
+                playerCamera.rotation.y -= e.movementX * 0.002;
+                playerCamera.rotation.x -= e.movementY * 0.002;
+            }
         });
 
-        // Rodar ao iniciar
-        window.onload = atualizarExplorer;
+        // Touch para celular
+        document.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            previousMouseX = e.touches[0].clientX;
+            previousMouseY = e.touches[0].clientY;
+        });
+        document.addEventListener('touchmove', (e) => {
+            if(isDragging) {
+                const deltaX = e.touches[0].clientX - previousMouseX;
+                const deltaY = e.touches[0].clientY - previousMouseY;
+                playerCamera.rotation.y -= deltaX * 0.005;
+                playerCamera.rotation.x -= deltaY * 0.005;
+                previousMouseX = e.touches[0].clientX;
+                previousMouseY = e.touches[0].clientY;
+            }
+        });
+
+        // --- LOOP DE RENDERIZAÇÃO (Onde o jogo "corre") ---
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, playerCamera);
+        }
+        
+        window.addEventListener('resize', () => {
+            playerCamera.aspect = window.innerWidth / window.innerHeight;
+            playerCamera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
     </script>
 </body>
 </html>
