@@ -2,30 +2,50 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Meu Mapa 3D</title>
+    <title>Meu Jogo 3D Estável</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   </head>
-  <body style="margin: 0; overflow: hidden;">
+  <body style="margin: 0; overflow: hidden; background-color: #000;">
 
-    <a-scene vr-mode-ui="enabled: false">
+    <a-scene vr-mode-ui="enabled: false" loading-screen="dotsColor: white; backgroundColor: black">
       
       <a-assets>
-        <a-asset-item id="meu-mapa" src="mapa.glb"></a-asset-item>
+        <a-asset-item id="mapa-modelo" src="mapa.glb"></a-asset-item>
       </a-assets>
 
       <a-entity 
-        gltf-model="#meu-mapa" 
-        position="0 0 0" 
-        scale="20 20 20">
+        id="meu-mapa"
+        gltf-model="#mapa-modelo" 
+        position="0 0 -5" 
+        scale="1 1 1"
+        visible="true">
       </a-entity>
 
-      <a-light type="ambient" intensity="0.8"></a-light>
-      <a-light type="directional" position="1 5 2" intensity="0.6"></a-light>
+      <a-grid position="0 0 0"></a-grid>
 
-      <a-sky color="#87CEEB"></a-sky>
+      <a-light type="ambient" intensity="1.5"></a-light>
+      <a-light type="directional" position="1 1 1" intensity="1"></a-light>
 
-      <a-entity camera look-controls wasd-controls position="0 5 0"></a-entity>
+      <a-sky color="#6EBAFF"></a-sky>
+
+      <a-entity id="rig" position="0 1.6 0">
+        <a-entity camera look-controls wasd-controls></a-entity>
+      </a-entity>
 
     </a-scene>
+
+    <script>
+      const mapa = document.querySelector('#meu-mapa');
+      
+      mapa.addEventListener('model-loaded', () => {
+        console.log("✅ Mapa carregado com sucesso!");
+        alert("O mapa carregou! Procure ao seu redor arrastando o dedo.");
+      });
+
+      mapa.addEventListener('model-error', (e) => {
+        console.error("❌ Erro ao carregar o mapa:", e);
+        alert("Erro: O arquivo 'mapa.glb' não foi encontrado ou está corrompido. Verifique o nome no GitHub!");
+      });
+    </script>
   </body>
 </html>
