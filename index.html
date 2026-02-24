@@ -1,49 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Roblox Web - Localizador de Modelo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Roblox Web Engine</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        #status-ui { position: absolute; top: 10px; left: 10px; color: #0f0; font-family: monospace; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #0f0; z-index: 100; }
+    </style>
 </head>
-<body style="margin: 0; background: #111; overflow: hidden;">
-    <div id="status" style="position: absolute; color: lime; padding: 10px; font-family: monospace;">Buscando Cubo no espaço...</div>
+<body>
+
+    <div id="status-ui">STATUS: <span id="msg">Iniciando...</span></div>
 
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000); // Fundo preto para você ver qualquer ponto branco
-        
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
+        scene.background = new THREE.Color(0x87CEEB);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        const light = new THREE.AmbientLight(0xffffff, 2);
-        scene.add(light);
+        // Iluminação (Hemisférica para brilhar o modelo)
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+
+        // Grid de referência (Baseplate)
+        scene.add(new THREE.GridHelper(100, 50));
 
         const loader = new THREE.GLTFLoader();
-        // O link que montamos do seu GitHub
-        const url = "https://raw.githubusercontent.com/kauericardo159-hub/MiniGame/main/Cubo.glb";
+        
+        // LINK CORRIGIDO: Apontando para a pasta Documents onde o arquivo está!
+        const url = "https://raw.githubusercontent.com/kauericardo159-hub/MiniGame/main/Documents/Cubo.glb";
 
         loader.load(url, (gltf) => {
-            const model = gltf.scene;
-            scene.add(model);
-
-            // --- TRUQUE MÁGICO: ENCONTRAR O MODELO ---
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-
-            // Move a câmera para perto do objeto, não importa onde ele esteja
-            camera.position.set(center.x, center.y, center.z + (size.y * 2) + 50);
-            camera.lookAt(center);
-
-            document.getElementById('status').innerText = "✅ ACHEI! Local: Y=" + Math.round(center.y);
+            scene.add(gltf.scene);
+            gltf.scene.scale.set(10, 10, 10); // Aumenta o tamanho do modelo
+            document.getElementById('msg').innerText = "✅ CUBO ONLINE!";
         }, 
-        undefined, 
+        (xhr) => {
+            let p = Math.round((xhr.loaded / xhr.total) * 100);
+            document.getElementById('msg').innerText = "Baixando: " + p + "%";
+        }, 
         (err) => {
-            document.getElementById('status').innerText = "❌ Erro: Link quebrado ou arquivo corrompido.";
+            document.getElementById('msg').innerText = "❌ ERRO AO BUSCAR ARQUIVO";
+            console.error(err);
         });
+
+        camera.position.set(0, 5, 15);
+        camera.lookAt(0, 0, 0);
+
+        // Rotação por toque
+        let touchX = 0;
+        document.addEventListener('touchmove', (e) => {
+            let dx = e.touches[0].clientX - touchX;
+            scene.rotation.y += dx * 0.01;
+            touchX = e.touches[0].clientX;
+        });
+        document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; });
 
         function animate() {
             requestAnimationFrame(animate);
