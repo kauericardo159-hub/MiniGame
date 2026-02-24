@@ -1,161 +1,91 @@
 <!DOCTYPE html>
-<html>
-  <head>
+<html lang="pt">
+<head>
     <meta charset="utf-8">
-    <title>MiniGame 3D - Teste de Blocos</title>
+    <title>MiniGame Dev Mode</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
-      /* Estilos para os botões de controle */
-      .controls {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 10px;
-        z-index: 9999;
-      }
-      .control-button {
-        background-color: rgba(255, 255, 255, 0.7);
-        border: none;
-        padding: 15px 25px;
-        font-size: 1.2em;
-        border-radius: 8px;
-        cursor: pointer;
-        user-select: none; /* Evita seleção de texto no celular */
-      }
-      .zoom-controls {
-        position: fixed;
-        bottom: 90px;
-        right: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        z-index: 9999;
-      }
+        /* Estilo do Explorer (Janela Flutuante) */
+        #explorer {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 200px;
+            max-height: 80vh;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #0f0;
+            border-radius: 5px;
+            z-index: 999;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        #explorer h3 { margin-top: 0; color: #fff; border-bottom: 1px solid #0f0; }
+        .item { margin-bottom: 5px; cursor: pointer; }
+        .item:hover { background: #222; }
+        .status-ok { color: #0f0; }
+        .status-err { color: #f00; }
     </style>
-  </head>
-  <body style="margin: 0; overflow: hidden; background: #000;">
+</head>
+<body>
 
-    <a-scene vr-mode-ui="enabled: false" background="color: #6EBAFF">
-      
-      <a-assets>
-        <a-asset-item id="meu-mapa-modelo" src="https://kauericardo159-hub.github.io/MiniGame/mapa.glb"></a-asset-item>
-      </a-assets>
+    <div id="explorer">
+        <h3>📂 EXPLORER</h3>
+        <div id="lista-objetos">Buscando objetos...</div>
+        <hr>
+        <div id="status-mapa">Mapa: Verificando...</div>
+    </div>
 
-      <a-entity 
-        gltf-model="#meu-mapa-modelo" 
-        position="0 0 0" 
-        scale="20 20 20"> 
-      </a-entity>
+    <a-scene vr-mode-ui="enabled: false">
+        <a-assets>
+            <a-asset-item id="meu-mapa" src="mapa.glb"></a-asset-item>
+        </a-assets>
 
-      <a-box color="green" position="0 -0.5 0" scale="10 0.1 10"></a-box> 
+        <a-entity id="Entidade_Mapa" gltf-model="#meu-mapa" position="0 0 -5" scale="1 1 1"></a-entity>
 
-      <a-light type="ambient" intensity="0.8"></a-light>
-      <a-light type="directional" position="1 5 2" intensity="0.6"></a-light>
+        <a-box id="Cubo_Teste" position="-2 0.5 -3" color="red"></a-box>
+        <a-sphere id="Esfera_Teste" position="2 0.5 -3" color="blue"></a-sphere>
 
-      <a-sky color="#87CEEB"></a-sky>
-
-      <a-entity id="player-rig" position="0 1.6 0" wasd-controls="enabled: false">
-        <a-entity id="player-body" geometry="primitive: box; height: 1.6; depth: 0.5; width: 0.5" material="color: red" position="0 -0.8 0"></a-entity>
-        <a-entity id="main-camera" camera look-controls="enabled: true"></a-entity>
-      </a-entity>
-
+        <a-sky color="#222"></a-sky>
+        <a-light type="ambient" intensity="1"></a-light>
+        <a-camera position="0 1.6 0"></a-camera>
     </a-scene>
 
-    <div class="controls">
-      <button class="control-button" id="move-forward">Cima</button>
-      <button class="control-button" id="move-backward">Baixo</button>
-      <button class="control-button" id="move-left">Esquerda</button>
-      <button class="control-button" id="move-right">Direita</button>
-    </div>
-
-    <div class="zoom-controls">
-      <button class="control-button" id="zoom-in">+</button>
-      <button class="control-button" id="zoom-out">-</button>
-    </div>
-
     <script>
-      const playerRig = document.getElementById('player-rig');
-      const mainCamera = document.getElementById('main-camera');
-      const moveSpeed = 0.1; // Velocidade de movimento
-      let currentZoom = 60; // Valor inicial do FOV (Field of View)
+        // Lógica para atualizar o Explorer
+        function atualizarExplorer() {
+            const lista = document.getElementById('lista-objetos');
+            const objetos = document.querySelectorAll('a-entity, a-box, a-sphere, a-light');
+            
+            lista.innerHTML = ""; // Limpa a lista
+            
+            objetos.forEach(obj => {
+                const id = obj.id || obj.tagName.toLowerCase();
+                const div = document.createElement('div');
+                div.className = "item";
+                div.innerHTML = `🔹 ${id}`;
+                lista.appendChild(div);
+            });
+        }
 
-      // === Controles de Movimento ===
-      document.getElementById('move-forward').addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Evita scroll da página no mobile
-        playerRig.setAttribute('wasd-controls', 'acceleration: 500; enabled: true');
-        playerRig.components['wasd-controls'].data.keys.forwards = 'move-forward'; // Hack para simular tecla
-      }, {passive: false});
-      document.getElementById('move-forward').addEventListener('touchend', () => {
-        playerRig.setAttribute('wasd-controls', 'acceleration: 0; enabled: false');
-      });
+        // Verifica se o mapa carregou de verdade
+        const mapaEntidade = document.querySelector('#Entidade_Mapa');
+        const statusMapa = document.getElementById('status-mapa');
 
-      // Repetir para Baixo, Esquerda, Direita
-      document.getElementById('move-backward').addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        playerRig.setAttribute('wasd-controls', 'acceleration: 500; enabled: true');
-        playerRig.components['wasd-controls'].data.keys.backwards = 'move-backward';
-      }, {passive: false});
-      document.getElementById('move-backward').addEventListener('touchend', () => {
-        playerRig.setAttribute('wasd-controls', 'acceleration: 0; enabled: false');
-      });
+        mapaEntidade.addEventListener('model-loaded', () => {
+            statusMapa.innerHTML = "Mapa: <span class='status-ok'>CARREGADO ✅</span>";
+            atualizarExplorer();
+        });
 
-      document.getElementById('move-left').addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        playerRig.setAttribute('wasd-controls', 'acceleration: 500; enabled: true');
-        playerRig.components['wasd-controls'].data.keys.strafeLeft = 'move-left';
-      }, {passive: false});
-      document.getElementById('move-left').addEventListener('touchend', () => {
-        playerRig.setAttribute('wasd-controls', 'acceleration: 0; enabled: false');
-      });
+        mapaEntidade.addEventListener('model-error', () => {
+            statusMapa.innerHTML = "Mapa: <span class='status-err'>ERRO ❌</span>";
+            console.error("Não foi possível carregar o mapa.glb");
+        });
 
-      document.getElementById('move-right').addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        playerRig.setAttribute('wasd-controls', 'acceleration: 500; enabled: true');
-        playerRig.components['wasd-controls'].data.keys.strafeRight = 'move-right';
-      }, {passive: false});
-      document.getElementById('move-right').addEventListener('touchend', () => {
-        playerRig.setAttribute('wasd-controls', 'acceleration: 0; enabled: false');
-      });
-
-
-      // === Controles de Zoom ===
-      document.getElementById('zoom-in').addEventListener('click', () => {
-        currentZoom = Math.max(10, currentZoom - 5); // Limite mínimo de zoom
-        mainCamera.setAttribute('camera', 'fov', currentZoom);
-      });
-
-      document.getElementById('zoom-out').addEventListener('click', () => {
-        currentZoom = Math.min(100, currentZoom + 5); // Limite máximo de zoom
-        mainCamera.setAttribute('camera', 'fov', currentZoom);
-      });
-
-
-      // === Lógica para carregar o mapa ou mostrar a grade de fallback ===
-      const seuMapa = document.querySelector('#meu-mapa-modelo');
-      const blocoVerdeTeste = document.querySelector('a-box[color="green"]');
-
-      seuMapa.addEventListener('model-loaded', () => {
-        console.log("✅ Seu mapa GLB carregou com sucesso!");
-        // Oculta o bloco verde se o mapa carregar
-        if (blocoVerdeTeste) blocoVerdeTeste.setAttribute('visible', 'false');
-        seuMapa.setAttribute('visible', 'true');
-      });
-
-      seuMapa.addEventListener('model-error', (e) => {
-        console.warn("⚠️ Não foi possível carregar o mapa GLB. Motivo:", e);
-        alert("Ops! Seu mapa GLB não carregou. Verifique o arquivo.");
-        // Mostra o bloco verde se o mapa não carregar
-        if (blocoVerdeTeste) blocoVerdeTeste.setAttribute('visible', 'true');
-        seuMapa.setAttribute('visible', 'false'); // Garante que o modelo não apareça se houver erro
-      });
-
-      // Configura visibilidade inicial (antes de saber se o mapa carrega)
-      // Oculta o mapa GLB inicialmente, até sabermos se ele carregou ou não
-      seuMapa.setAttribute('visible', 'false'); 
-      // O bloco verde já está visível por padrão no HTML, e será ocultado se o mapa carregar.
-
+        // Rodar ao iniciar
+        window.onload = atualizarExplorer;
     </script>
-  </body>
+</body>
 </html>
