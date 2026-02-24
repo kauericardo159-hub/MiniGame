@@ -1,82 +1,48 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox Web Engine</title>
+    <title>Roblox Web - Localizador de Modelo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
-        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; z-index: 100; }
-        #canvas-container { width: 100vw; height: 100vh; }
-    </style>
 </head>
-<body>
-
-    <div id="loading">
-        <h2 id="msg">Iniciando Motor...</h2>
-        <p id="perc">0%</p>
-    </div>
+<body style="margin: 0; background: #111; overflow: hidden;">
+    <div id="status" style="position: absolute; color: lime; padding: 10px; font-family: monospace;">Buscando Cubo no espaço...</div>
 
     <script>
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
+        scene.background = new THREE.Color(0x000000); // Fundo preto para você ver qualquer ponto branco
         
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // Luzes (Crucial para ver o modelo)
-        const light = new THREE.HemisphereLight(0xffffff, 0x000000, 2);
+        const light = new THREE.AmbientLight(0xffffff, 2);
         scene.add(light);
 
-        // Chão de referência (Grid)
-        const grid = new THREE.GridHelper(100, 20, 0xffffff, 0xffffff);
-        scene.add(grid);
-
-        // CARREGADOR
         const loader = new THREE.GLTFLoader();
-        // O link que "montamos" do seu GitHub:
+        // O link que montamos do seu GitHub
         const url = "https://raw.githubusercontent.com/kauericardo159-hub/MiniGame/main/Cubo.glb";
 
         loader.load(url, (gltf) => {
             const model = gltf.scene;
-            model.scale.set(5, 5, 5); 
-            model.position.set(0, 0, 0);
             scene.add(model);
-            
-            document.getElementById('loading').style.display = 'none';
+
+            // --- TRUQUE MÁGICO: ENCONTRAR O MODELO ---
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+
+            // Move a câmera para perto do objeto, não importa onde ele esteja
+            camera.position.set(center.x, center.y, center.z + (size.y * 2) + 50);
+            camera.lookAt(center);
+
+            document.getElementById('status').innerText = "✅ ACHEI! Local: Y=" + Math.round(center.y);
         }, 
-        (xhr) => {
-            if (xhr.lengthComputable) {
-                const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                document.getElementById('perc').innerText = percent + "%";
-                document.getElementById('msg').innerText = "Baixando Cubo...";
-            }
-        },
+        undefined, 
         (err) => {
-            document.getElementById('msg').innerText = "Erro ao carregar!";
-            document.getElementById('perc').innerText = "Verifique o nome do arquivo no GitHub";
-            console.error(err);
-        });
-
-        camera.position.set(0, 5, 10);
-        camera.lookAt(0, 0, 0);
-
-        // Controle simples de rotação (arrastar o dedo)
-        let isTouching = false;
-        let prevX = 0;
-        document.addEventListener('touchstart', (e) => { isTouching = true; prevX = e.touches[0].clientX; });
-        document.addEventListener('touchend', () => { isTouching = false; });
-        document.addEventListener('touchmove', (e) => {
-            if(isTouching) {
-                let delta = e.touches[0].clientX - prevX;
-                scene.rotation.y += delta * 0.01;
-                prevX = e.touches[0].clientX;
-            }
+            document.getElementById('status').innerText = "❌ Erro: Link quebrado ou arquivo corrompido.";
         });
 
         function animate() {
@@ -84,12 +50,6 @@
             renderer.render(scene, camera);
         }
         animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
