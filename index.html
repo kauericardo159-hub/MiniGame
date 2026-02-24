@@ -2,20 +2,27 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>Meu Roblox Web Engine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Roblox Web Mobile</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
-        #gui { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.5); padding: 10px; pointer-events: none; border-radius: 5px; }
-        #joystick { position: absolute; bottom: 20px; left: 20px; width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; display: none; } /* Para mobile futuro */
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; touch-action: none; }
+        #gui { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.6); padding: 8px; border-radius: 5px; pointer-events: none; font-size: 12px; }
+        
+        /* Estilo do Joystick */
+        #joystick-container { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); touch-action: none; }
+        #joystick-knob { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: white; border-radius: 50%; transform: translate(-50%, -50%); opacity: 0.8; }
     </style>
 </head>
 <body>
 
     <div id="gui">
-        <b>Roblox Web v1.0</b><br>
-        Status: <span id="status">Carregando mapa...</span><br>
-        Use o dedo/mouse para olhar.
+        <b>ROBLOX WEB ENGINE</b><br>
+        Status: <span id="status">Buscando Cubo.glb...</span><br>
+        Controles: Joystick para andar | Arrastar para olhar
+    </div>
+
+    <div id="joystick-container">
+        <div id="joystick-knob"></div>
     </div>
 
     <script type="importmap">
@@ -30,101 +37,106 @@
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-        // --- CONFIGURAÇÃO DA CENA ---
+        // 1. CENA E RENDER
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Céu azul clássico do Roblox
-        scene.fog = new THREE.Fog(0x87CEEB, 10, 100);
-
-        const camera = new THREE.Camera(); // Criaremos a perspectiva abaixo
+        scene.background = new THREE.Color(0x87CEEB); 
+        
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // --- ILUMINAÇÃO (Estilo Studio) ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-        sunLight.position.set(5, 10, 7.5);
-        scene.add(sunLight);
+        // 2. CÂMERA (Avatar)
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const player = new THREE.Group();
+        player.add(camera);
+        player.position.set(0, 2, 5); // Começa um pouco atrás do centro
+        scene.add(player);
 
-        // --- BASEPLATE (Igual ao Roblox) ---
-        const gridHelper = new THREE.GridHelper(100, 100, 0x000000, 0xffffff);
-        scene.add(gridHelper);
-        
-        const plateGeo = new THREE.PlaneGeometry(100, 100);
-        const plateMat = new THREE.MeshPhongMaterial({ color: 0x3d3d3d });
-        const basePlate = new THREE.Mesh(plateGeo, plateMat);
-        basePlate.rotation.x = -Math.PI / 2;
-        scene.add(basePlate);
+        // 3. LUZ
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const sun = new THREE.DirectionalLight(0xffffff, 1);
+        sun.position.set(5, 10, 5);
+        scene.add(sun);
 
-        // --- CARREGAR O SEU MAPA DO PRISMA 3D ---
+        // 4. BASEPLATE (Chão reserva)
+        const grid = new THREE.GridHelper(200, 50, 0x000000, 0xffffff);
+        scene.add(grid);
+
+        // 5. CARREGAR O CUBO.GLB
         const loader = new GLTFLoader();
-        const urlMapa = 'https://kauericardo159-hub.github.io/MiniGame/mapa.glb';
-
-        loader.load(urlMapa, (gltf) => {
-            const mapa = gltf.scene;
-            mapa.scale.set(10, 10, 10); // Aumenta o mapa
-            mapa.position.set(0, 0, 0); // No centro
-            scene.add(mapa);
-            document.getElementById('status').innerText = "Mapa Online!";
-        }, 
-        undefined, 
-        (error) => {
-            console.error(error);
-            document.getElementById('status').innerText = "Erro ao carregar mapa.glb";
+        // Alterado para o seu novo arquivo
+        loader.load('Cubo.glb', (gltf) => {
+            const model = gltf.scene;
+            model.scale.set(5, 5, 5); // Ajuste se ficar pequeno
+            scene.add(model);
+            document.getElementById('status').innerText = "Cubo.glb Online!";
+        }, undefined, (err) => {
+            document.getElementById('status').innerText = "Erro ao carregar Cubo.glb";
         });
 
-        // --- CONTROLES (Câmera de Jogador) ---
-        const playerCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        playerCamera.position.y = 2; // Altura dos olhos do avatar
-        
-        // Simples rotação por toque/mouse
-        let isDragging = false;
-        let previousMouseX = 0;
-        let previousMouseY = 0;
+        // 6. LÓGICA DO JOYSTICK E MOVIMENTO
+        let moveForward = 0, moveRight = 0;
+        const knob = document.getElementById('joystick-knob');
+        const container = document.getElementById('joystick-container');
+        let touchId = null;
 
-        document.addEventListener('mousedown', () => isDragging = true);
-        document.addEventListener('mouseup', () => isDragging = false);
-        document.addEventListener('mousemove', (e) => {
-            if(isDragging) {
-                playerCamera.rotation.y -= e.movementX * 0.002;
-                playerCamera.rotation.x -= e.movementY * 0.002;
+        container.addEventListener('touchstart', (e) => { touchId = e.targetTouches[0].identifier; });
+        window.addEventListener('touchmove', (e) => {
+            let touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
+            if (!touch) return;
+
+            let rect = container.getBoundingClientRect();
+            let centerX = rect.left + rect.width / 2;
+            let centerY = rect.top + rect.height / 2;
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            let dist = Math.min(dx * dx + dy * dy, 2500); // Max 50px radius
+            let angle = Math.atan2(dy, dx);
+            
+            let moveX = Math.cos(angle) * Math.sqrt(dist);
+            let moveY = Math.sin(angle) * Math.sqrt(dist);
+
+            knob.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
+            
+            moveRight = moveX / 50;
+            moveForward = -moveY / 50;
+        });
+        window.addEventListener('touchend', () => {
+            knob.style.transform = `translate(-50%, -50%)`;
+            moveForward = 0; moveRight = 0; touchId = null;
+        });
+
+        // 7. OLHAR AO REDOR (Touch no lado direito)
+        let lat = 0, lon = 0;
+        window.addEventListener('touchmove', (e) => {
+            if (e.targetTouches[0].clientX > window.innerWidth / 2 && touchId === null) {
+                // Lógica de rotação simplificada
+                player.rotation.y -= e.movementX * 0.005 || 0;
             }
         });
 
-        // Touch para celular
-        document.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            previousMouseX = e.touches[0].clientX;
-            previousMouseY = e.touches[0].clientY;
-        });
-        document.addEventListener('touchmove', (e) => {
-            if(isDragging) {
-                const deltaX = e.touches[0].clientX - previousMouseX;
-                const deltaY = e.touches[0].clientY - previousMouseY;
-                playerCamera.rotation.y -= deltaX * 0.005;
-                playerCamera.rotation.x -= deltaY * 0.005;
-                previousMouseX = e.touches[0].clientX;
-                previousMouseY = e.touches[0].clientY;
-            }
-        });
-
-        // --- LOOP DE RENDERIZAÇÃO (Onde o jogo "corre") ---
+        // 8. LOOP DE ANIMAÇÃO
+        const speed = 0.15;
         function animate() {
             requestAnimationFrame(animate);
-            renderer.render(scene, playerCamera);
+
+            // Mover Player na direção da câmera
+            if (moveForward !== 0 || moveRight !== 0) {
+                player.translateZ(-moveForward * speed);
+                player.translateX(moveRight * speed);
+            }
+
+            renderer.render(scene, camera);
         }
-        
+        animate();
+
         window.addEventListener('resize', () => {
-            playerCamera.aspect = window.innerWidth / window.innerHeight;
-            playerCamera.updateProjectionMatrix();
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        animate();
     </script>
 </body>
 </html>
