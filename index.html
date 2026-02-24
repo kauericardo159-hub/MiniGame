@@ -2,40 +2,29 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Meu Jogo Mobile</title>
+    <title>Meu Jogo Mobile 3D</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
 
     <a-scene vr-mode-ui="enabled: false">
       
       <a-assets>
-        <a-asset-item id="meu-mapa" src="mapa.glb"></a-asset-item>
+        <a-asset-item id="mapa" src="mapa.glb"></a-asset-item>
       </a-assets>
 
       <a-entity 
-        gltf-model="#meu-mapa" 
+        gltf-model="#mapa" 
         position="0 0 -10" 
-        scale="15 15 15">
+        scale="15 15 15"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear">
       </a-entity>
 
-      <a-sky color="#87CEEB"></a-sky>
-      <a-light type="ambient" intensity="0.8"></a-light>
-      <a-light type="directional" position="1 5 1" intensity="0.6"></a-light>
+      <a-light type="ambient" intensity="1"></a-light>
+      <a-light type="directional" position="2 4 -3" intensity="0.8"></a-light>
 
-      <a-entity id="rig" movement-controls="fly: false">
-        <a-entity camera 
-                  position="0 1.6 0" 
-                  look-controls="pointerLockEnabled: true">
-        </a-entity>
-      </a-entity>
+      <a-sky color="#222"></a-sky> <a-entity camera look-controls position="0 1.6 0"></a-entity>
 
     </a-scene>
-
-    <div style="position: fixed; bottom: 10px; left: 10px; color: white; font-family: sans-serif; background: rgba(0,0,0,0.5); padding: 5px;">
-      Arraste o dedo para olhar | Use o toque para andar
-    </div>
-
   </body>
 </html>
