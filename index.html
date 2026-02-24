@@ -3,68 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox Web Engine</title>
+    <title>Mundo Gerado 3D</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
         #status-ui { position: absolute; top: 10px; left: 10px; color: #0f0; font-family: monospace; background: rgba(0,0,0,0.8); padding: 10px; border: 1px solid #0f0; z-index: 100; }
+        /* Para o joystick futuro, se precisar */
+        #joystick-container { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="status-ui">STATUS: <span id="msg">Iniciando...</span></div>
+    <div id="status-ui">STATUS: <span id="msg">Criando mundo...</span></div>
 
     <script>
+        // 1. Configuração da Cena
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
+        scene.background = new THREE.Color(0x87CEEB); // Céu Azul
+        scene.fog = new THREE.Fog(0x87CEEB, 20, 100); // Neblina para profundidade
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Iluminação (Hemisférica para brilhar o modelo)
-        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+        // 2. Iluminação
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.5)); // Luz ambiente geral
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1); // Luz solar
+        dirLight.position.set(5, 10, 7.5);
+        scene.add(dirLight);
 
-        // Grid de referência (Baseplate)
-        scene.add(new THREE.GridHelper(100, 50));
+        // --- FUNÇÕES PARA CRIAR OBJETOS DO MUNDO ---
 
-        const loader = new THREE.GLTFLoader();
+        // Função para criar o Chão (Grama)
+        function createGround() {
+            const geometry = new THREE.PlaneGeometry(200, 200); // Grande área
+            const material = new THREE.MeshPhongMaterial({ color: 0x6B8E23 }); // Cor de grama
+            const ground = new THREE.Mesh(geometry, material);
+            ground.rotation.x = -Math.PI / 2; // Gira para ficar horizontal
+            ground.position.y = 0;
+            scene.add(ground);
+        }
+
+        // Função para criar um Caminho (Areia/Terra)
+        function createPath(x, z, width, length) {
+            const geometry = new THREE.PlaneGeometry(width, length);
+            const material = new THREE.MeshPhongMaterial({ color: 0xD2B48C }); // Cor de areia/terra
+            const path = new THREE.Mesh(geometry, material);
+            path.rotation.x = -Math.PI / 2;
+            path.position.set(x, 0.01, z); // Acima da grama para não "lutar"
+            scene.add(path);
+        }
+
+        // Função para criar uma Cabana Simples
+        function createCabin(x, z, size = 3) {
+            // Corpo da cabana
+            const bodyGeo = new THREE.BoxGeometry(size, size * 0.8, size);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 }); // Madeira
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.set(x, size * 0.4, z); // Metade da altura acima do chão
+            scene.add(body);
+
+            // Telhado (Pirâmide)
+            const roofGeo = new THREE.ConeGeometry(size * 0.8, size * 0.6, 4); // Cone de 4 lados
+            const roofMat = new THREE.MeshPhongMaterial({ color: 0xA52A2A }); // Vermelho tijolo
+            const roof = new THREE.Mesh(roofGeo, roofMat);
+            roof.position.set(x, size * 0.8 + size * 0.3, z); // Acima do corpo
+            scene.add(roof);
+        }
+
+        // Função para criar uma Árvore Simples
+        function createTree(x, z) {
+            // Tronco
+            const trunkGeo = new THREE.CylinderGeometry(0.3, 0.3, 2, 8); // Tronco fino
+            const trunkMat = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.set(x, 1, z);
+            scene.add(trunk);
+
+            // Folhas (Esfera)
+            const leavesGeo = new THREE.SphereGeometry(1.5, 8, 8); // Esfera com menos segmentos
+            const leavesMat = new THREE.MeshPhongMaterial({ color: 0x228B22 }); // Verde floresta
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.set(x, 2.8, z);
+            scene.add(leaves);
+        }
+
+        // --- MONTANDO O MUNDO ---
+        createGround();
         
-        // LINK CORRIGIDO: Apontando para a pasta Documents onde o arquivo está!
-        const url = "https://raw.githubusercontent.com/kauericardo159-hub/MiniGame/main/Documents/Cubo.glb";
+        // Caminhos
+        createPath(0, 0, 5, 100); // Caminho principal vertical
+        createPath(-20, 10, 50, 5); // Caminho horizontal
+        
+        // Cabanas
+        createCabin(15, 20);
+        createCabin(-10, -15, 4); // Cabana maior
+        createCabin(30, -5);
 
-        loader.load(url, (gltf) => {
-            scene.add(gltf.scene);
-            gltf.scene.scale.set(10, 10, 10); // Aumenta o tamanho do modelo
-            document.getElementById('msg').innerText = "✅ CUBO ONLINE!";
-        }, 
-        (xhr) => {
-            let p = Math.round((xhr.loaded / xhr.total) * 100);
-            document.getElementById('msg').innerText = "Baixando: " + p + "%";
-        }, 
-        (err) => {
-            document.getElementById('msg').innerText = "❌ ERRO AO BUSCAR ARQUIVO";
-            console.error(err);
-        });
+        // Árvores
+        createTree(25, 10);
+        createTree(20, -10);
+        createTree(-5, 25);
+        createTree(-30, 0);
+        createTree(5, 35);
 
-        camera.position.set(0, 5, 15);
-        camera.lookAt(0, 0, 0);
 
-        // Rotação por toque
-        let touchX = 0;
+        // 3. Posição da Câmera (Onde você "nasce" no mundo)
+        camera.position.set(0, 2, 10); // Um pouco mais alto para ver o mundo
+        camera.lookAt(0, 0, 0); // Olhando para o centro do mundo
+
+        // 4. Controles (Movimento básico de arrastar para girar a câmera)
+        let isTouching = false;
+        let prevX = 0;
+        document.addEventListener('touchstart', (e) => { isTouching = true; prevX = e.touches[0].clientX; });
+        document.addEventListener('touchend', () => { isTouching = false; });
         document.addEventListener('touchmove', (e) => {
-            let dx = e.touches[0].clientX - touchX;
-            scene.rotation.y += dx * 0.01;
-            touchX = e.touches[0].clientX;
+            if(isTouching) {
+                let delta = e.touches[0].clientX - prevX;
+                scene.rotation.y += delta * 0.005; // Gira o mundo em vez da câmera
+                prevX = e.touches[0].clientX;
+            }
         });
-        document.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; });
 
+        // 5. Loop de Renderização
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
         }
         animate();
+
+        // 6. Resposta a redimensionamento da janela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        document.getElementById('msg').innerText = "Mundo Gerado!";
     </script>
 </body>
 </html>
