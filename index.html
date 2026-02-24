@@ -3,71 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox Web Teste</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+    <title>Roblox Web Engine</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #333; }
-        #debug { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.8); padding: 10px; font-family: monospace; z-index: 100; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: sans-serif; }
+        #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; z-index: 100; }
+        #canvas-container { width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
 
-    <div id="debug">
-        Status: <span id="log">Iniciando...</span>
+    <div id="loading">
+        <h2 id="msg">Iniciando Motor...</h2>
+        <p id="perc">0%</p>
     </div>
 
     <script>
-        // 1. Configuração Básica
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
+        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
         document.body.appendChild(renderer.domElement);
 
-        // 2. Luz
-        const light = new THREE.AmbientLight(0xffffff, 1);
+        // Luzes (Crucial para ver o modelo)
+        const light = new THREE.HemisphereLight(0xffffff, 0x000000, 2);
         scene.add(light);
 
-        // 3. CUBO DE TESTE (Se você vir isso, o motor está OK)
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const cube = new THREE.Mesh(geometry, material);
-        cube.position.set(0, 0.5, -3);
-        scene.add(cube);
+        // Chão de referência (Grid)
+        const grid = new THREE.GridHelper(100, 20, 0xffffff, 0xffffff);
+        scene.add(grid);
 
-        // 4. CARREGAR SEU MODELO (Link Direto)
+        // CARREGADOR
         const loader = new THREE.GLTFLoader();
-        // ATENÇÃO: Verifique se o C de Cubo está maiúsculo no GitHub!
-        const url = "https://kauericardo159-hub.github.io/MiniGame/Cubo.glb";
+        // O link que "montamos" do seu GitHub:
+        const url = "https://raw.githubusercontent.com/kauericardo159-hub/MiniGame/main/Cubo.glb";
 
-        document.getElementById('log').innerText = "Baixando Cubo.glb...";
-
-        loader.load(url, 
-            (gltf) => {
-                const model = gltf.scene;
-                model.scale.set(10, 10, 10); // Aumenta bem o tamanho
-                model.position.set(0, 0, 0);
-                scene.add(model);
-                document.getElementById('log').innerText = "✅ MODELO CARREGADO!";
-                cube.visible = false; // Esconde o cubo vermelho se o mapa carregar
-            },
-            undefined,
-            (error) => {
-                document.getElementById('log').innerText = "❌ ERRO: Arquivo não encontrado ou inválido.";
-                console.error(error);
+        loader.load(url, (gltf) => {
+            const model = gltf.scene;
+            model.scale.set(5, 5, 5); 
+            model.position.set(0, 0, 0);
+            scene.add(model);
+            
+            document.getElementById('loading').style.display = 'none';
+        }, 
+        (xhr) => {
+            if (xhr.lengthComputable) {
+                const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                document.getElementById('perc').innerText = percent + "%";
+                document.getElementById('msg').innerText = "Baixando Cubo...";
             }
-        );
+        },
+        (err) => {
+            document.getElementById('msg').innerText = "Erro ao carregar!";
+            document.getElementById('perc').innerText = "Verifique o nome do arquivo no GitHub";
+            console.error(err);
+        });
 
-        camera.position.z = 5;
-        camera.position.y = 2;
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        // Controle simples de rotação (arrastar o dedo)
+        let isTouching = false;
+        let prevX = 0;
+        document.addEventListener('touchstart', (e) => { isTouching = true; prevX = e.touches[0].clientX; });
+        document.addEventListener('touchend', () => { isTouching = false; });
+        document.addEventListener('touchmove', (e) => {
+            if(isTouching) {
+                let delta = e.touches[0].clientX - prevX;
+                scene.rotation.y += delta * 0.01;
+                prevX = e.touches[0].clientX;
+            }
+        });
 
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
         }
         animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
 </body>
 </html>
