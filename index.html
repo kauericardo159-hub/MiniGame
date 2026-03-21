@@ -3,136 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Advanced Roblox Web Builder</title>
+    <title>Meu Jogo R6</title>
+
+<script src="https://unpkg.com/three@0.146.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/loaders/OBJLoader.js"></script>
+
     <style>
-        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #222; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; color: white; }
-        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 2s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        #ui { 
+            position: absolute; top: 10px; left: 10px; 
+            color: #0f0; font-family: monospace; z-index: 100; 
+        }
     </style>
 </head>
 <body>
+    <div id="ui">Iniciando...</div>
 
-    <div id="loading-screen">
-        <div class="loader"></div>
-        <div id="load-msg">Construindo Universo...</div>
-    </div>
+<script src="input.js"></script>
+<script src="model-player.js"></script>
+<script src="cores-player.js"></script>
+<script src="player.js"></script>
+<script src="mundo.js"></script>
 
-    <script type="module">
-        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+<script src="shader.js"></script>
 
-        // 1. AMBIENTE E RENDERER
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
-        scene.fog = new THREE.FogExp2(0x87CEEB, 0.015);
+<script src="main.js"></script>
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        document.body.appendChild(renderer.domElement);
-
-        // 2. ILUMINAÇÃO (Sol e Céu)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(100, 200, 100);
-        sun.castShadow = true;
-        scene.add(sun);
-
-        // Criando o Sol Visual
-        const sunGeo = new THREE.SphereGeometry(10, 32, 32);
-        const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff300 });
-        const sunMesh = new THREE.Mesh(sunGeo, sunMat);
-        sunMesh.position.set(100, 200, 100);
-        scene.add(sunMesh);
-
-        // 3. ELEMENTOS DO MUNDO
-        
-        // Grama (Chão)
-        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-        const groundMat = new THREE.MeshPhongMaterial({ color: 0x4d9024 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.receiveShadow = true;
-        scene.add(ground);
-
-        // Montanhas (Terreno Irregular)
-        function createMountain(x, z, scale) {
-            const mGeo = new THREE.ConeGeometry(20 * scale, 40 * scale, 4);
-            const mMat = new THREE.MeshPhongMaterial({ color: 0x7d7d7d });
-            const mountain = new THREE.Mesh(mGeo, mMat);
-            mountain.position.set(x, (20 * scale), z);
-            mountain.rotation.y = Math.random() * Math.PI;
-            scene.add(mountain);
-        }
-
-        // Cabanas Entráveis (Sem porta, com interior vazio)
-        function createCabin(x, z) {
-            const group = new THREE.Group();
-            const wallMat = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
-            
-            // Paredes (Esquerda, Direita, Fundo)
-            const wallGeo = new THREE.BoxGeometry(0.5, 5, 6);
-            const leftWall = new THREE.Mesh(wallGeo, wallMat);
-            leftWall.position.set(-3, 2.5, 0);
-            
-            const rightWall = leftWall.clone();
-            rightWall.position.set(3, 2.5, 0);
-            
-            const backWall = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 0.5), wallMat);
-            backWall.position.set(0, 2.5, -3);
-
-            // Telhado
-            const roofGeo = new THREE.BoxGeometry(7, 0.5, 7);
-            const roof = new THREE.Mesh(roofGeo, new THREE.MeshPhongMaterial({color: 0x3e2723}));
-            roof.position.y = 5;
-            roof.rotation.z = 0.1;
-
-            group.add(leftWall, rightWall, backWall, roof);
-            group.position.set(x, 0, z);
-            scene.add(group);
-        }
-
-        // Nuvens Low Poly
-        function createCloud(x, y, z) {
-            const group = new THREE.Group();
-            const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
-            for(let i=0; i<3; i++) {
-                const part = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 3), cloudMat);
-                part.position.x = i * 2;
-                part.position.y = Math.random();
-                group.add(part);
-            }
-            group.position.set(x, y, z);
-            scene.add(group);
-        }
-
-        // Árvores
-        function createTree(x, z) {
-            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 3), new THREE.MeshPhongMaterial({color: 0x3e2723}));
-            trunk.position.set(x, 1.5, z);
-            const leaves = new THREE.Mesh(new THREE.SphereGeometry(2, 8, 8), new THREE.MeshPhongMaterial({color: 0x2e7d32}));
-            leaves.position.set(x, 4, z);
-            scene.add(trunk, leaves);
-        }
-
-        // GERAR CENÁRIO RANDOMIZADO
-        for(let i=0; i<15; i++) createMountain(Math.random()*400-200, Math.random()*400-200, Math.random()*2+1);
-        for(let i=0; i<20; i++) createTree(Math.random()*100-50, Math.random()*100-50);
-        for(let i=0; i<5; i++) createCabin(Math.random()*60-30, Math.random()*60-30);
-        for(let i=0; i<10; i++) createCloud(Math.random()*200-100, 40 + Math.random()*20, Math.random()*200-100);
-
-        // OCULTAR LOADING
-        setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 1000);
-
-        // Exportar a cena para o game.js usar
-        window.gameScene = scene;
-        window.gameCamera = camera;
-        window.gameRenderer = renderer;
-    </script>
-
-    <script type="module" src="game.js"></script>
 </body>
 </html>
